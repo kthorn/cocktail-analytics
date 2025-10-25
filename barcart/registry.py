@@ -1,4 +1,4 @@
-"""Ingredient metadata registry for tracking IDs, names, and matrix indices."""
+"""Generic registry for entity metadata, tracking IDs, names, and matrix indices."""
 
 import warnings
 
@@ -111,19 +111,19 @@ class Registry:
 
     def get_name(self, index: int | None = None, id: str | int | None = None) -> str:
         """
-        Get ingredient name from either index or id.
+        Get entity name from either index or id.
 
         Parameters
         ----------
         index : int, optional
             Matrix index (0-based). Mutually exclusive with `id`.
         id : str, optional
-            Ingredient ID. Mutually exclusive with `index`.
+            Entity ID. Mutually exclusive with `index`.
 
         Returns
         -------
         str
-            Ingredient name.
+            Entity name.
 
         Raises
         ------
@@ -152,24 +152,24 @@ class Registry:
             return str(self._names[index])
         else:
             if id not in self._id_to_idx:
-                raise KeyError(f"Ingredient ID '{id}' not found in registry")
+                raise KeyError(f"Entity ID '{id}' not found in registry")
             return str(self._names[self._id_to_idx[id]])
 
     def get_id(self, *, index: int | None = None, name: str | None = None) -> str:
         """
-        Get ingredient ID from either index or name.
+        Get entity ID from either index or name.
 
         Parameters
         ----------
         index : int, optional
             Matrix index (0-based). Mutually exclusive with `name`.
         name : str, optional
-            Ingredient name. Mutually exclusive with `index`.
+            Entity name. Mutually exclusive with `index`.
 
         Returns
         -------
         str
-            Ingredient ID.
+            Entity ID.
 
         Raises
         ------
@@ -202,7 +202,7 @@ class Registry:
                     str(name): idx for idx, name in enumerate(self._names)
                 }
             if name not in self._name_to_idx:
-                raise KeyError(f"Ingredient name '{name}' not found in registry")
+                raise KeyError(f"Entity name '{name}' not found in registry")
             return str(self._ids[self._name_to_idx[name]])
 
     def get_index(self, *, id: str | None = None, name: str | None = None) -> int:
@@ -212,9 +212,9 @@ class Registry:
         Parameters
         ----------
         id : str, optional
-            Ingredient ID. Mutually exclusive with `name`.
+            Entity ID. Mutually exclusive with `name`.
         name : str, optional
-            Ingredient name. Mutually exclusive with `id`.
+            Entity name. Mutually exclusive with `id`.
 
         Returns
         -------
@@ -241,7 +241,7 @@ class Registry:
 
         if id is not None:
             if id not in self._id_to_idx:
-                raise KeyError(f"Ingredient ID '{id}' not found in registry")
+                raise KeyError(f"Entity ID '{id}' not found in registry")
             return int(self._id_to_idx[id])
         else:
             # Lazy build name index on first name lookup
@@ -250,7 +250,7 @@ class Registry:
                     str(name): idx for idx, name in enumerate(self._names)
                 }
             if name not in self._name_to_idx:
-                raise KeyError(f"Ingredient name '{name}' not found in registry")
+                raise KeyError(f"Entity name '{name}' not found in registry")
             return int(self._name_to_idx[name])
 
     def __len__(self) -> int:
