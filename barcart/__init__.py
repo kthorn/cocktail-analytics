@@ -23,7 +23,7 @@ from barcart.distance import (
     knn_matrix,
     m_step_blosum,
     neighbor_weight_matrix,
-    report_ingredient_neighbors,
+    report_neighbors,
     # Distance computations
     weighted_distance,
 )
@@ -43,7 +43,7 @@ __all__ = [
     "emd_matrix",
     # Neighborhood analysis
     "knn_matrix",
-    "report_ingredient_neighbors",
+    "report_neighbors",
     "neighbor_weight_matrix",
     # Advanced analytics
     "expected_ingredient_match_matrix",

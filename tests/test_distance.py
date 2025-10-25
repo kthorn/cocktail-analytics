@@ -289,3 +289,75 @@ class TestBuildRecipeVolumeMatrix:
         # Verify matrix dimensions match registry
         assert volume_matrix.shape[0] == len(recipe_registry)
         assert volume_matrix.shape[1] == len(ingredient_registry)
+
+
+class TestReportNeighbors:
+    """Test generic report_neighbors function."""
+
+    def test_report_neighbors_with_recipes(self):
+        """Test report_neighbors works for recipe entities."""
+        import numpy as np
+        from barcart.distance import report_neighbors
+        from barcart.registry import Registry
+
+        # Create recipe registry
+        recipe_registry = Registry([
+            (0, "r1", "Martini"),
+            (1, "r2", "Gimlet"),
+            (2, "r3", "Daiquiri"),
+        ])
+
+        # Create fake distance matrix
+        distance_matrix = np.array([
+            [0.0, 0.5, 1.0],
+            [0.5, 0.0, 0.8],
+            [1.0, 0.8, 0.0],
+        ])
+
+        result = report_neighbors(distance_matrix, recipe_registry, k=2)
+
+        # Verify DataFrame structure
+        assert list(result.columns) == ["id", "name", "neighbor_id", "neighbor_name", "distance"]
+        assert len(result) == 6  # 3 recipes * 2 neighbors each
+
+        # Verify first recipe's neighbors
+        r1_neighbors = result[result["id"] == "r1"]
+        assert len(r1_neighbors) == 2
+        assert r1_neighbors.iloc[0]["neighbor_id"] == "r2"
+        assert r1_neighbors.iloc[0]["distance"] == 0.5
+        assert r1_neighbors.iloc[1]["neighbor_id"] == "r3"
+        assert r1_neighbors.iloc[1]["distance"] == 1.0
+
+    def test_report_neighbors_with_ingredients(self):
+        """Test report_neighbors works for ingredient entities."""
+        import numpy as np
+        from barcart.distance import report_neighbors
+        from barcart.registry import Registry
+
+        # Create ingredient registry
+        ingredient_registry = Registry([
+            (0, "ing_1", "Gin"),
+            (1, "ing_2", "Vodka"),
+            (2, "ing_3", "Rum"),
+        ])
+
+        # Create fake cost matrix
+        cost_matrix = np.array([
+            [0.0, 1.0, 2.0],
+            [1.0, 0.0, 1.5],
+            [2.0, 1.5, 0.0],
+        ])
+
+        result = report_neighbors(cost_matrix, ingredient_registry, k=1)
+
+        # Verify DataFrame structure
+        assert list(result.columns) == ["id", "name", "neighbor_id", "neighbor_name", "distance"]
+        assert len(result) == 3  # 3 ingredients * 1 neighbor each
+
+        # Verify first ingredient's neighbor
+        gin_neighbors = result[result["id"] == "ing_1"]
+        assert len(gin_neighbors) == 1
+        assert gin_neighbors.iloc[0]["name"] == "Gin"
+        assert gin_neighbors.iloc[0]["neighbor_id"] == "ing_2"
+        assert gin_neighbors.iloc[0]["neighbor_name"] == "Vodka"
+        assert gin_neighbors.iloc[0]["distance"] == 1.0

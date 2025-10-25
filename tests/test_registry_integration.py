@@ -8,7 +8,7 @@ from barcart import (
     Registry,
     build_ingredient_distance_matrix,
     build_ingredient_tree,
-    report_ingredient_neighbors,
+    report_neighbors,
 )
 
 
@@ -179,11 +179,11 @@ class TestBuildIngredientDistanceMatrixIntegration:
             assert isinstance(name, str)
 
 
-class TestReportIngredientNeighborsIntegration:
-    """Test report_ingredient_neighbors with Registry."""
+class TestReportNeighborsIntegration:
+    """Test report_neighbors with Registry."""
 
     def test_report_neighbors_produces_dataframe(self, sample_ingredient_df):
-        """Test that report_ingredient_neighbors returns a DataFrame."""
+        """Test that report_neighbors returns a DataFrame."""
         tree, parent_map = build_ingredient_tree(sample_ingredient_df)
         id_to_name = dict(
             zip(
@@ -193,7 +193,7 @@ class TestReportIngredientNeighborsIntegration:
         )
 
         matrix, registry = build_ingredient_distance_matrix(parent_map, id_to_name)
-        neighbors_df = report_ingredient_neighbors(matrix, k=2, registry=registry)
+        neighbors_df = report_neighbors(matrix, registry, k=2)
 
         assert isinstance(neighbors_df, pd.DataFrame)
         assert len(neighbors_df) > 0
@@ -209,14 +209,14 @@ class TestReportIngredientNeighborsIntegration:
         )
 
         matrix, registry = build_ingredient_distance_matrix(parent_map, id_to_name)
-        neighbors_df = report_ingredient_neighbors(matrix, k=2, registry=registry)
+        neighbors_df = report_neighbors(matrix, registry, k=2)
 
         expected_columns = {
-            "ingredient_id",
-            "ingredient_name",
+            "id",
+            "name",
             "neighbor_id",
             "neighbor_name",
-            "cost",
+            "distance",
         }
         assert set(neighbors_df.columns) == expected_columns
 
@@ -232,7 +232,7 @@ class TestReportIngredientNeighborsIntegration:
 
         matrix, registry = build_ingredient_distance_matrix(parent_map, id_to_name)
         k = 2
-        neighbors_df = report_ingredient_neighbors(matrix, k=k, registry=registry)
+        neighbors_df = report_neighbors(matrix, registry, k=k)
 
         # Each ingredient should have k neighbors
         assert len(neighbors_df) == len(registry) * k
@@ -248,16 +248,16 @@ class TestReportIngredientNeighborsIntegration:
         )
 
         matrix, registry = build_ingredient_distance_matrix(parent_map, id_to_name)
-        neighbors_df = report_ingredient_neighbors(matrix, k=2, registry=registry)
+        neighbors_df = report_neighbors(matrix, registry, k=2)
 
         # Verify that for each row, the ID → name mapping is correct
         for _, row in neighbors_df.iterrows():
-            ing_id = row["ingredient_id"]
-            ing_name = row["ingredient_name"]
+            entity_id = row["id"]
+            entity_name = row["name"]
             neighbor_id = row["neighbor_id"]
             neighbor_name = row["neighbor_name"]
 
-            assert registry.get_name(id=ing_id) == ing_name
+            assert registry.get_name(id=entity_id) == entity_name
             assert registry.get_name(id=neighbor_id) == neighbor_name
 
     def test_mismatched_matrix_raises(self, sample_ingredient_df):
@@ -276,7 +276,7 @@ class TestReportIngredientNeighborsIntegration:
         wrong_matrix = np.zeros((len(registry) + 1, len(registry) + 1))
 
         with pytest.raises(ValueError, match="incompatible"):
-            report_ingredient_neighbors(wrong_matrix, k=2, registry=registry)
+            report_neighbors(wrong_matrix, registry, k=2)
 
 
 class TestEndToEndWorkflow:
@@ -303,11 +303,11 @@ class TestEndToEndWorkflow:
         registry.validate_matrix(matrix)
 
         # Step 5: Generate neighbor report
-        neighbors_df = report_ingredient_neighbors(matrix, k=2, registry=registry)
+        neighbors_df = report_neighbors(matrix, registry, k=2)
 
         # Step 6: Verify output quality
         assert len(neighbors_df) == len(registry) * 2
-        assert neighbors_df["cost"].min() >= 0  # Distances are non-negative
+        assert neighbors_df["distance"].min() >= 0  # Distances are non-negative
         assert not neighbors_df.isnull().any().any()  # No missing values
 
     def test_can_query_registry_after_creation(self, sample_ingredient_df):
