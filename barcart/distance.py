@@ -199,13 +199,15 @@ def weighted_distance(
 def build_ingredient_distance_matrix(
     parent_map: dict[str, tuple[str | None, float]],
     id_to_name: dict[str | int, str],
+    root_id: str = "root",
 ) -> tuple[np.ndarray, "IngredientRegistry"]:
     """
     Build a pairwise distance matrix and ingredient registry together.
 
     Computes the weighted distance between every pair of nodes (ingredients) in the tree,
     using the parent_map produced by `build_ingredient_tree`. The registry and matrix
-    are constructed atomically to ensure they stay in sync.
+    are constructed atomically to ensure they stay in sync. The root node is excluded
+    from the matrix as it is an implicit structural node, not an actual ingredient.
 
     Parameters
     ----------
@@ -215,23 +217,28 @@ def build_ingredient_distance_matrix(
         and edge_weight is the cost to reach that parent.
     id_to_name : dict of str or int to str
         Mapping from ingredient ID to human-readable name.
+    root_id : str, default "root"
+        ID of the root node to exclude from the matrix. Should match the root_id
+        used in build_ingredient_tree.
 
     Returns
     -------
     distance_matrix : np.ndarray
-        A symmetric 2D array of shape (n, n) where n is the number of nodes in parent_map.
+        A symmetric 2D array of shape (n, n) where n is the number of non-root nodes.
         Each entry (i, j) is the weighted tree distance between nodes i and j.
     registry : IngredientRegistry
-        Metadata for the n ingredients, guaranteed to match matrix dimensions.
+        Metadata for the n ingredients (excluding root), guaranteed to match matrix dimensions.
 
     Notes
     -----
     The function relies on `weighted_distance` to compute tree distances.
     The registry is built from the same ingredient ordering as the matrix.
+    The root node is excluded as it's an implicit structural element, not an ingredient.
     """
     from barcart.registry import IngredientRegistry
 
-    ingredient_ids = list(parent_map.keys())
+    # Exclude root node from ingredient list
+    ingredient_ids = [id for id in parent_map.keys() if id != root_id]
     id_to_index = {id: i for i, id in enumerate(ingredient_ids)}
 
     # Normalize id_to_name to use string keys (handles int/str mismatch)
@@ -257,7 +264,7 @@ def build_ingredient_distance_matrix(
 
 def build_recipe_volume_matrix(
     recipes_df: pd.DataFrame,
-    ingredient_id_to_index: dict[str, int],
+    registry: "IngredientRegistry",
     recipe_id_col: str = "recipe_id",
     ingredient_id_col: str = "ingredient_id",
     volume_col: str = "volume_fraction",
@@ -273,8 +280,8 @@ def build_recipe_volume_matrix(
     ----------
     recipes_df : pd.DataFrame
         DataFrame containing at least recipe IDs, ingredient IDs, and volume fractions.
-    ingredient_id_to_index : dict[str, int]
-        Mapping from ingredient IDs to matrix columns.
+    registry : IngredientRegistry
+        Ingredient metadata registry providing ID to matrix index mapping.
     recipe_id_col : str, optional
         Column name for recipe IDs. Default is "recipe_id".
     ingredient_id_col : str, optional
@@ -289,7 +296,7 @@ def build_recipe_volume_matrix(
     volume_matrix : np.ndarray
         Array of shape (n_recipes, m_ingredients); entry [i, j] is the volume fraction of ingredient j in recipe i.
         Rows correspond to recipes as dictated by recipe_id_to_index;
-        columns to ingredients as dictated by ingredient_id_to_index.
+        columns to ingredients as dictated by the registry.
     recipe_id_to_index : dict[str, int]
         Mapping from recipe IDs to matrix rows.
 
@@ -313,10 +320,10 @@ def build_recipe_volume_matrix(
 
     recipe_ids = list(recipes_df[recipe_id_col].unique())
     recipe_id_to_index = {str(id): i for i, id in enumerate(recipe_ids)}
-    volume_matrix = np.zeros((len(recipe_ids), len(ingredient_id_to_index)))
+    volume_matrix = np.zeros((len(recipe_ids), len(registry)))
     for _, row in recipes_df.iterrows():
         recipe_index = recipe_id_to_index[str(row[recipe_id_col])]
-        ingredient_index = ingredient_id_to_index[str(row[ingredient_id_col])]
+        ingredient_index = registry.get_index(id=str(row[ingredient_id_col]))
         volume_matrix[recipe_index, ingredient_index] = float(row[volume_col])
     # Check that all rows of volume_matrix sum to 1 within numerical error
     row_sums = volume_matrix.sum(axis=1)
@@ -809,11 +816,8 @@ def _median_rescale(cost_matrix: np.ndarray, target: float = 1.0) -> np.ndarray:
 
 
 def m_step_blosum(
-    cost_matrix: np.ndarray,
     T_sum: np.ndarray,
     blosum_alpha: float,
-    prior_blend: float,
-    clamp: tuple[float, float] | None = None,
     median_target: float = 1.0,
 ) -> np.ndarray:
     """
@@ -827,18 +831,11 @@ def m_step_blosum(
 
     Parameters
     ----------
-    cost_matrix : np.ndarray
-        The prior or current cost matrix, shape (m, m).
     T_sum : np.ndarray
         Ingredient-by-ingredient expected match counts, shape (m, m). Do not pass
         a recipe-by-recipe matrix here.
     blosum_alpha : float
         Laplace smoothing parameter (pseudo-counts).
-    prior_blend : float
-        Weight for blending the update towards the prior cost matrix (0 = ignore prior, 1 = only prior).
-    clamp : tuple of float, optional
-        (lo, hi) value range to clamp the entrywise costs after each projection step.
-        If None, no clamping is performed.
     median_target : float, optional
         Value to which the median off-diagonal entry is scaled (defaults to 1.0).
 
@@ -854,7 +851,9 @@ def m_step_blosum(
     row = N.sum(axis=1, keepdims=True)
     col = N.sum(axis=0, keepdims=True)
     # Expected under independence
-    E = ((row + alpha) @ (col + alpha)) / (total + alpha * N.size)
+    E = ((row + alpha * N.shape[0]) @ (col + alpha * N.shape[0])) / (
+        total + alpha * N.size
+    )
     S = (N + alpha) / (E + 1e-12)
     C_new = -np.log(S + 1e-12)
     C_new = C_new - C_new.min()
