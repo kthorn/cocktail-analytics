@@ -266,24 +266,29 @@ def build_recipe_volume_matrix(
     recipes_df: pd.DataFrame,
     registry: "Registry",
     recipe_id_col: str = "recipe_id",
+    recipe_name_col: str = "recipe_name",
     ingredient_id_col: str = "ingredient_id",
     volume_col: str = "volume_fraction",
     volume_error_tolerance: float = 1e-6,
-) -> tuple[np.ndarray, dict[str, int]]:
+) -> tuple[np.ndarray, "Registry"]:
     """
-    Construct a matrix of recipe ingredient volume fractions.
+    Construct a matrix of recipe ingredient volume fractions and recipe registry.
 
     Builds a matrix of shape (n_recipes, m_ingredients) where each entry [i, j] is
     the volume fraction of ingredient j in recipe i from the supplied DataFrame.
+    Also constructs a Registry for the recipes, guaranteeing matrix and metadata
+    stay in sync.
 
     Parameters
     ----------
     recipes_df : pd.DataFrame
-        DataFrame containing at least recipe IDs, ingredient IDs, and volume fractions.
+        DataFrame containing at least recipe IDs, recipe names, ingredient IDs, and volume fractions.
     registry : Registry
         Ingredient metadata registry providing ID to matrix index mapping.
     recipe_id_col : str, optional
         Column name for recipe IDs. Default is "recipe_id".
+    recipe_name_col : str, optional
+        Column name for recipe names. Default is "recipe_name".
     ingredient_id_col : str, optional
         Column name for ingredient IDs. Default is "ingredient_id".
     volume_col : str, optional
@@ -295,10 +300,10 @@ def build_recipe_volume_matrix(
     -------
     volume_matrix : np.ndarray
         Array of shape (n_recipes, m_ingredients); entry [i, j] is the volume fraction of ingredient j in recipe i.
-        Rows correspond to recipes as dictated by recipe_id_to_index;
-        columns to ingredients as dictated by the registry.
-    recipe_id_to_index : dict[str, int]
-        Mapping from recipe IDs to matrix rows.
+        Rows correspond to recipes as dictated by recipe_registry;
+        columns to ingredients as dictated by the ingredient_registry.
+    recipe_registry : Registry
+        Recipe metadata registry, guaranteed to match volume_matrix dimensions.
 
     Raises
     ------
@@ -318,13 +323,32 @@ def build_recipe_volume_matrix(
             f"recipes_df['{volume_col}'] contains NaNs; please clean first"
         )
 
-    recipe_ids = list(recipes_df[recipe_id_col].unique())
-    recipe_id_to_index = {str(id): i for i, id in enumerate(recipe_ids)}
-    volume_matrix = np.zeros((len(recipe_ids), len(registry)))
+    # Build recipe registry
+    recipe_ids = sorted(recipes_df[recipe_id_col].unique())
+    recipe_id_to_index = {str(rid): i for i, rid in enumerate(recipe_ids)}
+
+    # Extract recipe names (take first occurrence per recipe ID)
+    recipe_names = {}
+    for _, row in recipes_df[[recipe_id_col, recipe_name_col]].iterrows():
+        rid = str(row[recipe_id_col])
+        if rid not in recipe_names:
+            recipe_names[rid] = str(row[recipe_name_col])
+
+    # Construct Registry
+    recipes = [
+        (idx, rid, recipe_names.get(rid, f"Recipe {rid}"))
+        for rid, idx in recipe_id_to_index.items()
+    ]
+    from barcart.registry import Registry
+    recipe_registry = Registry(recipes)
+
+    # Build volume matrix
+    volume_matrix = np.zeros((len(recipe_registry), len(registry)))
     for _, row in recipes_df.iterrows():
         recipe_index = recipe_id_to_index[str(row[recipe_id_col])]
         ingredient_index = registry.get_index(id=str(row[ingredient_id_col]))
         volume_matrix[recipe_index, ingredient_index] = float(row[volume_col])
+
     # Check that all rows of volume_matrix sum to 1 within numerical error
     row_sums = volume_matrix.sum(axis=1)
     if not np.allclose(row_sums, 1.0, atol=volume_error_tolerance):
@@ -335,7 +359,8 @@ def build_recipe_volume_matrix(
             f"Offending rows: {bad_rows}. \n"
             f"Row sums: {row_sums[bad_rows]}; recipe ids: {bad_recipe_ids}"
         )
-    return volume_matrix, recipe_id_to_index
+
+    return volume_matrix, recipe_registry
 
 
 def compute_emd(

@@ -244,3 +244,48 @@ class TestMStepBlosum:
         # Verify the computation doesn't produce degenerate results
         # (all zeros or all same value would indicate a bug)
         assert np.std(C_new[~np.eye(m, dtype=bool)]) > 0
+
+
+class TestBuildRecipeVolumeMatrix:
+    """Test build_recipe_volume_matrix function."""
+
+    def test_build_recipe_volume_matrix_returns_registry(self):
+        """Test that build_recipe_volume_matrix constructs and returns a recipe Registry."""
+        import pandas as pd
+        from barcart.distance import build_recipe_volume_matrix
+        from barcart.registry import Registry
+
+        # Create ingredient registry
+        ingredient_registry = Registry([
+            (0, "ing_1", "Gin"),
+            (1, "ing_2", "Vodka"),
+            (2, "ing_3", "Lime Juice"),
+        ])
+
+        # Create recipes dataframe
+        recipes_df = pd.DataFrame([
+            {"recipe_id": "r1", "recipe_name": "Gimlet", "ingredient_id": "ing_1", "volume_fraction": 0.6},
+            {"recipe_id": "r1", "recipe_name": "Gimlet", "ingredient_id": "ing_3", "volume_fraction": 0.4},
+            {"recipe_id": "r2", "recipe_name": "Vodka Gimlet", "ingredient_id": "ing_2", "volume_fraction": 0.6},
+            {"recipe_id": "r2", "recipe_name": "Vodka Gimlet", "ingredient_id": "ing_3", "volume_fraction": 0.4},
+        ])
+
+        volume_matrix, recipe_registry = build_recipe_volume_matrix(
+            recipes_df,
+            ingredient_registry,
+            recipe_name_col="recipe_name",
+        )
+
+        # Verify recipe_registry is a Registry instance
+        assert isinstance(recipe_registry, Registry)
+        assert len(recipe_registry) == 2
+
+        # Verify registry contents
+        assert recipe_registry.get_name(index=0) == "Gimlet"
+        assert recipe_registry.get_name(index=1) == "Vodka Gimlet"
+        assert recipe_registry.get_id(name="Gimlet") == "r1"
+        assert recipe_registry.get_id(name="Vodka Gimlet") == "r2"
+
+        # Verify matrix dimensions match registry
+        assert volume_matrix.shape[0] == len(recipe_registry)
+        assert volume_matrix.shape[1] == len(ingredient_registry)
