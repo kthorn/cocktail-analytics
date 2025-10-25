@@ -37,13 +37,13 @@ tree, parent_map = build_ingredient_tree(ingredients_df)
 
 # Compute ingredient distance matrix
 from barcart import build_ingredient_distance_matrix
-dist_matrix, id_to_idx = build_ingredient_distance_matrix(parent_map)
+dist_matrix, ingredient_registry = build_ingredient_distance_matrix(parent_map)
 
 # Build recipe volume matrix
 from barcart import build_recipe_volume_matrix
-vol_matrix, recipe_to_idx = build_recipe_volume_matrix(
+vol_matrix, recipe_registry = build_recipe_volume_matrix(
     recipes_df,
-    id_to_idx
+    ingredient_registry
 )
 
 # Compute recipe similarities with EMD

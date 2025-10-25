@@ -6,6 +6,8 @@ import ot
 import pandas as pd
 from tqdm.auto import tqdm
 
+from barcart.registry import Registry
+
 
 def build_ingredient_tree(
     df,
@@ -339,7 +341,6 @@ def build_recipe_volume_matrix(
         (idx, rid, recipe_names.get(rid, f"Recipe {rid}"))
         for rid, idx in recipe_id_to_index.items()
     ]
-    from barcart.registry import Registry
     recipe_registry = Registry(recipes)
 
     # Build volume matrix
