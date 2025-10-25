@@ -100,7 +100,7 @@ def build_ingredient_tree(
 
         # Link root -> first
         prev = root_id
-        for idx, raw_id in enumerate(parts):
+        for _idx, raw_id in enumerate(parts):
             nid = str(raw_id)
             ensure_node(nid)
             # connect prev -> nid
@@ -664,7 +664,6 @@ def report_neighbors(
     >>> emd_dist = emd_matrix(volume_matrix, cost_matrix)
     >>> recipe_neighbors = report_neighbors(emd_dist, recipe_registry, k=10)
     """
-    from barcart.registry import Registry
 
     # Validate matrix dimensions match registry
     registry.validate_matrix(distance_matrix)

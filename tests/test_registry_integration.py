@@ -33,7 +33,7 @@ class TestBuildIngredientDistanceMatrixIntegration:
         id_to_name = dict(
             zip(
                 sample_ingredient_df["ingredient_id"],
-                sample_ingredient_df["ingredient_name"],
+                sample_ingredient_df["ingredient_name"], strict=False,
             )
         )
 
@@ -73,7 +73,7 @@ class TestBuildIngredientDistanceMatrixIntegration:
         id_to_name = dict(
             zip(
                 sample_ingredient_df["ingredient_id"],
-                sample_ingredient_df["ingredient_name"],
+                sample_ingredient_df["ingredient_name"], strict=False,
             )
         )
 
@@ -90,7 +90,7 @@ class TestBuildIngredientDistanceMatrixIntegration:
         id_to_name = dict(
             zip(
                 sample_ingredient_df["ingredient_id"],
-                sample_ingredient_df["ingredient_name"],
+                sample_ingredient_df["ingredient_name"], strict=False,
             )
         )
 
@@ -112,7 +112,7 @@ class TestBuildIngredientDistanceMatrixIntegration:
         id_to_name = dict(
             zip(
                 sample_ingredient_df["ingredient_id"],
-                sample_ingredient_df["ingredient_name"],
+                sample_ingredient_df["ingredient_name"], strict=False,
             )
         )
 
@@ -129,7 +129,7 @@ class TestBuildIngredientDistanceMatrixIntegration:
         id_to_name = dict(
             zip(
                 sample_ingredient_df["ingredient_id"],
-                sample_ingredient_df["ingredient_name"],
+                sample_ingredient_df["ingredient_name"], strict=False,
             )
         )
 
@@ -144,7 +144,7 @@ class TestBuildIngredientDistanceMatrixIntegration:
         id_to_name = dict(
             zip(
                 sample_ingredient_df["ingredient_id"],
-                sample_ingredient_df["ingredient_name"],
+                sample_ingredient_df["ingredient_name"], strict=False,
             )
         )
 
@@ -159,7 +159,7 @@ class TestBuildIngredientDistanceMatrixIntegration:
         id_to_name = dict(
             zip(
                 sample_ingredient_df["ingredient_id"],
-                sample_ingredient_df["ingredient_name"],
+                sample_ingredient_df["ingredient_name"], strict=False,
             )
         )
 
@@ -188,7 +188,7 @@ class TestReportNeighborsIntegration:
         id_to_name = dict(
             zip(
                 sample_ingredient_df["ingredient_id"],
-                sample_ingredient_df["ingredient_name"],
+                sample_ingredient_df["ingredient_name"], strict=False,
             )
         )
 
@@ -204,7 +204,7 @@ class TestReportNeighborsIntegration:
         id_to_name = dict(
             zip(
                 sample_ingredient_df["ingredient_id"],
-                sample_ingredient_df["ingredient_name"],
+                sample_ingredient_df["ingredient_name"], strict=False,
             )
         )
 
@@ -226,7 +226,7 @@ class TestReportNeighborsIntegration:
         id_to_name = dict(
             zip(
                 sample_ingredient_df["ingredient_id"],
-                sample_ingredient_df["ingredient_name"],
+                sample_ingredient_df["ingredient_name"], strict=False,
             )
         )
 
@@ -243,7 +243,7 @@ class TestReportNeighborsIntegration:
         id_to_name = dict(
             zip(
                 sample_ingredient_df["ingredient_id"],
-                sample_ingredient_df["ingredient_name"],
+                sample_ingredient_df["ingredient_name"], strict=False,
             )
         )
 
@@ -266,7 +266,7 @@ class TestReportNeighborsIntegration:
         id_to_name = dict(
             zip(
                 sample_ingredient_df["ingredient_id"],
-                sample_ingredient_df["ingredient_name"],
+                sample_ingredient_df["ingredient_name"], strict=False,
             )
         )
 
@@ -291,7 +291,7 @@ class TestEndToEndWorkflow:
         id_to_name = dict(
             zip(
                 sample_ingredient_df["ingredient_id"],
-                sample_ingredient_df["ingredient_name"],
+                sample_ingredient_df["ingredient_name"], strict=False,
             )
         )
 
@@ -316,7 +316,7 @@ class TestEndToEndWorkflow:
         id_to_name = dict(
             zip(
                 sample_ingredient_df["ingredient_id"],
-                sample_ingredient_df["ingredient_name"],
+                sample_ingredient_df["ingredient_name"], strict=False,
             )
         )
 

@@ -1,7 +1,6 @@
 """Tests for distance computation functions."""
 
 import numpy as np
-import pytest
 
 from barcart.distance import expected_ingredient_match_matrix, m_step_blosum
 
@@ -13,16 +12,20 @@ class TestExpectedIngredientMatchMatrix:
         """Test with minimal case: 2 recipes, 2 ingredients."""
         # Recipe 1: 100% ingredient 0
         # Recipe 2: 100% ingredient 1
-        volume_matrix = np.array([
-            [1.0, 0.0],
-            [0.0, 1.0],
-        ])
+        volume_matrix = np.array(
+            [
+                [1.0, 0.0],
+                [0.0, 1.0],
+            ]
+        )
 
         # Cost matrix: off-diagonal = 1.0
-        cost_matrix = np.array([
-            [0.0, 1.0],
-            [1.0, 0.0],
-        ])
+        cost_matrix = np.array(
+            [
+                [0.0, 1.0],
+                [1.0, 0.0],
+            ]
+        )
 
         # With k=1, each recipe's nearest neighbor is the other
         # beta=1.0 for simple exponential weighting
@@ -43,15 +46,19 @@ class TestExpectedIngredientMatchMatrix:
     def test_identical_recipes_zero_distance(self):
         """Test that identical recipes have zero EMD distance."""
         # Two identical recipes
-        volume_matrix = np.array([
-            [0.5, 0.5],
-            [0.5, 0.5],
-        ])
+        volume_matrix = np.array(
+            [
+                [0.5, 0.5],
+                [0.5, 0.5],
+            ]
+        )
 
-        cost_matrix = np.array([
-            [0.0, 1.0],
-            [1.0, 0.0],
-        ])
+        cost_matrix = np.array(
+            [
+                [0.0, 1.0],
+                [1.0, 0.0],
+            ]
+        )
 
         T_sum, N_pairs = expected_ingredient_match_matrix(
             volume_matrix, cost_matrix, k=1, beta=1.0
@@ -66,17 +73,21 @@ class TestExpectedIngredientMatchMatrix:
 
     def test_three_recipes_symmetry(self):
         """Test symmetry with 3 recipes."""
-        volume_matrix = np.array([
-            [1.0, 0.0, 0.0],  # Recipe 0: pure ingredient 0
-            [0.0, 1.0, 0.0],  # Recipe 1: pure ingredient 1
-            [0.0, 0.0, 1.0],  # Recipe 2: pure ingredient 2
-        ])
+        volume_matrix = np.array(
+            [
+                [1.0, 0.0, 0.0],  # Recipe 0: pure ingredient 0
+                [0.0, 1.0, 0.0],  # Recipe 1: pure ingredient 1
+                [0.0, 0.0, 1.0],  # Recipe 2: pure ingredient 2
+            ]
+        )
 
-        cost_matrix = np.array([
-            [0.0, 1.0, 2.0],
-            [1.0, 0.0, 1.0],
-            [2.0, 1.0, 0.0],
-        ])
+        cost_matrix = np.array(
+            [
+                [0.0, 1.0, 2.0],
+                [1.0, 0.0, 1.0],
+                [2.0, 1.0, 0.0],
+            ]
+        )
 
         T_sum, N_pairs = expected_ingredient_match_matrix(
             volume_matrix, cost_matrix, k=2, beta=1.0
@@ -91,16 +102,20 @@ class TestExpectedIngredientMatchMatrix:
 
     def test_plan_sparsification(self):
         """Test that plan_topk and plan_minfrac work."""
-        volume_matrix = np.array([
-            [0.7, 0.3, 0.0],
-            [0.0, 0.4, 0.6],
-        ])
+        volume_matrix = np.array(
+            [
+                [0.7, 0.3, 0.0],
+                [0.0, 0.4, 0.6],
+            ]
+        )
 
-        cost_matrix = np.array([
-            [0.0, 1.0, 1.0],
-            [1.0, 0.0, 1.0],
-            [1.0, 1.0, 0.0],
-        ])
+        cost_matrix = np.array(
+            [
+                [0.0, 1.0, 1.0],
+                [1.0, 0.0, 1.0],
+                [1.0, 1.0, 0.0],
+            ]
+        )
 
         # Should not raise errors
         T_sum_topk, _ = expected_ingredient_match_matrix(
@@ -151,11 +166,13 @@ class TestMStepBlosum:
 
     def test_symmetry_preserved(self):
         """Test that output cost matrix is symmetric."""
-        T_sum = np.array([
-            [5.0, 2.0, 1.0],
-            [2.0, 5.0, 3.0],
-            [1.0, 3.0, 5.0],
-        ])
+        T_sum = np.array(
+            [
+                [5.0, 2.0, 1.0],
+                [2.0, 5.0, 3.0],
+                [1.0, 3.0, 5.0],
+            ]
+        )
 
         C_new = m_step_blosum(T_sum, blosum_alpha=1.0, median_target=1.0)
 
@@ -173,11 +190,13 @@ class TestMStepBlosum:
     def test_laplace_smoothing_effect(self):
         """Test that Laplace smoothing prevents infinite costs."""
         # Sparse match matrix with zeros
-        T_sum = np.array([
-            [10.0, 0.0, 0.0],
-            [0.0, 10.0, 0.0],
-            [0.0, 0.0, 10.0],
-        ])
+        T_sum = np.array(
+            [
+                [10.0, 0.0, 0.0],
+                [0.0, 10.0, 0.0],
+                [0.0, 0.0, 10.0],
+            ]
+        )
 
         # With smoothing, should not get inf or nan
         C_new = m_step_blosum(T_sum, blosum_alpha=0.5, median_target=1.0)
@@ -187,11 +206,13 @@ class TestMStepBlosum:
 
     def test_median_rescaling(self):
         """Test that median of off-diagonal is scaled to target."""
-        T_sum = np.array([
-            [5.0, 2.0, 1.0],
-            [2.0, 5.0, 3.0],
-            [1.0, 3.0, 5.0],
-        ])
+        T_sum = np.array(
+            [
+                [5.0, 2.0, 1.0],
+                [2.0, 5.0, 3.0],
+                [1.0, 3.0, 5.0],
+            ]
+        )
 
         target = 2.5
         C_new = m_step_blosum(T_sum, blosum_alpha=1.0, median_target=target)
@@ -211,11 +232,13 @@ class TestMStepBlosum:
         row/column sums should increase by alpha * m, not just alpha.
         """
         m = 3
-        T_sum = np.array([
-            [5.0, 2.0, 1.0],
-            [2.0, 5.0, 3.0],
-            [1.0, 3.0, 5.0],
-        ])
+        T_sum = np.array(
+            [
+                [5.0, 2.0, 1.0],
+                [2.0, 5.0, 3.0],
+                [1.0, 3.0, 5.0],
+            ]
+        )
 
         alpha = 1.0
 
@@ -231,7 +254,7 @@ class TestMStepBlosum:
         # total_new = total + alpha * m^2
 
         # Expected matrix under independence
-        E_correct = ((row + alpha * m) @ (col + alpha * m)) / (total + alpha * m * m)
+        _E_correct = ((row + alpha * m) @ (col + alpha * m)) / (total + alpha * m * m)
 
         # This should match what the function computes
         # We can't directly access E from the function, but we can verify
@@ -252,23 +275,48 @@ class TestBuildRecipeVolumeMatrix:
     def test_build_recipe_volume_matrix_returns_registry(self):
         """Test that build_recipe_volume_matrix constructs and returns a recipe Registry."""
         import pandas as pd
+
         from barcart.distance import build_recipe_volume_matrix
         from barcart.registry import Registry
 
         # Create ingredient registry
-        ingredient_registry = Registry([
-            (0, "ing_1", "Gin"),
-            (1, "ing_2", "Vodka"),
-            (2, "ing_3", "Lime Juice"),
-        ])
+        ingredient_registry = Registry(
+            [
+                (0, "ing_1", "Gin"),
+                (1, "ing_2", "Vodka"),
+                (2, "ing_3", "Lime Juice"),
+            ]
+        )
 
         # Create recipes dataframe
-        recipes_df = pd.DataFrame([
-            {"recipe_id": "r1", "recipe_name": "Gimlet", "ingredient_id": "ing_1", "volume_fraction": 0.6},
-            {"recipe_id": "r1", "recipe_name": "Gimlet", "ingredient_id": "ing_3", "volume_fraction": 0.4},
-            {"recipe_id": "r2", "recipe_name": "Vodka Gimlet", "ingredient_id": "ing_2", "volume_fraction": 0.6},
-            {"recipe_id": "r2", "recipe_name": "Vodka Gimlet", "ingredient_id": "ing_3", "volume_fraction": 0.4},
-        ])
+        recipes_df = pd.DataFrame(
+            [
+                {
+                    "recipe_id": "r1",
+                    "recipe_name": "Gimlet",
+                    "ingredient_id": "ing_1",
+                    "volume_fraction": 0.6,
+                },
+                {
+                    "recipe_id": "r1",
+                    "recipe_name": "Gimlet",
+                    "ingredient_id": "ing_3",
+                    "volume_fraction": 0.4,
+                },
+                {
+                    "recipe_id": "r2",
+                    "recipe_name": "Vodka Gimlet",
+                    "ingredient_id": "ing_2",
+                    "volume_fraction": 0.6,
+                },
+                {
+                    "recipe_id": "r2",
+                    "recipe_name": "Vodka Gimlet",
+                    "ingredient_id": "ing_3",
+                    "volume_fraction": 0.4,
+                },
+            ]
+        )
 
         volume_matrix, recipe_registry = build_recipe_volume_matrix(
             recipes_df,
@@ -297,27 +345,38 @@ class TestReportNeighbors:
     def test_report_neighbors_with_recipes(self):
         """Test report_neighbors works for recipe entities."""
         import numpy as np
+
         from barcart.distance import report_neighbors
         from barcart.registry import Registry
 
         # Create recipe registry
-        recipe_registry = Registry([
-            (0, "r1", "Martini"),
-            (1, "r2", "Gimlet"),
-            (2, "r3", "Daiquiri"),
-        ])
+        recipe_registry = Registry(
+            [
+                (0, "r1", "Martini"),
+                (1, "r2", "Gimlet"),
+                (2, "r3", "Daiquiri"),
+            ]
+        )
 
         # Create fake distance matrix
-        distance_matrix = np.array([
-            [0.0, 0.5, 1.0],
-            [0.5, 0.0, 0.8],
-            [1.0, 0.8, 0.0],
-        ])
+        distance_matrix = np.array(
+            [
+                [0.0, 0.5, 1.0],
+                [0.5, 0.0, 0.8],
+                [1.0, 0.8, 0.0],
+            ]
+        )
 
         result = report_neighbors(distance_matrix, recipe_registry, k=2)
 
         # Verify DataFrame structure
-        assert list(result.columns) == ["id", "name", "neighbor_id", "neighbor_name", "distance"]
+        assert list(result.columns) == [
+            "id",
+            "name",
+            "neighbor_id",
+            "neighbor_name",
+            "distance",
+        ]
         assert len(result) == 6  # 3 recipes * 2 neighbors each
 
         # Verify first recipe's neighbors
@@ -331,27 +390,38 @@ class TestReportNeighbors:
     def test_report_neighbors_with_ingredients(self):
         """Test report_neighbors works for ingredient entities."""
         import numpy as np
+
         from barcart.distance import report_neighbors
         from barcart.registry import Registry
 
         # Create ingredient registry
-        ingredient_registry = Registry([
-            (0, "ing_1", "Gin"),
-            (1, "ing_2", "Vodka"),
-            (2, "ing_3", "Rum"),
-        ])
+        ingredient_registry = Registry(
+            [
+                (0, "ing_1", "Gin"),
+                (1, "ing_2", "Vodka"),
+                (2, "ing_3", "Rum"),
+            ]
+        )
 
         # Create fake cost matrix
-        cost_matrix = np.array([
-            [0.0, 1.0, 2.0],
-            [1.0, 0.0, 1.5],
-            [2.0, 1.5, 0.0],
-        ])
+        cost_matrix = np.array(
+            [
+                [0.0, 1.0, 2.0],
+                [1.0, 0.0, 1.5],
+                [2.0, 1.5, 0.0],
+            ]
+        )
 
         result = report_neighbors(cost_matrix, ingredient_registry, k=1)
 
         # Verify DataFrame structure
-        assert list(result.columns) == ["id", "name", "neighbor_id", "neighbor_name", "distance"]
+        assert list(result.columns) == [
+            "id",
+            "name",
+            "neighbor_id",
+            "neighbor_name",
+            "distance",
+        ]
         assert len(result) == 3  # 3 ingredients * 1 neighbor each
 
         # Verify first ingredient's neighbor

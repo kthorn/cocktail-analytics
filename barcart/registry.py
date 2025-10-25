@@ -107,7 +107,7 @@ class Registry:
         # 3. Names should be unique (warn if not, don't fail)
         if len(names) != len(set(names)):
             duplicates = {name for name in names if names.count(name) > 1}
-            warnings.warn(f"Duplicate entity names found: {duplicates}")
+            warnings.warn(f"Duplicate entity names found: {duplicates}", stacklevel=2)
 
     def get_name(self, index: int | None = None, id: str | int | None = None) -> str:
         """
