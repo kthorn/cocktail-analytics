@@ -1,71 +1,71 @@
-"""Tests for IngredientRegistry class."""
+"""Tests for Registry class."""
 
 import warnings
 
 import numpy as np
 import pytest
 
-from barcart.registry import IngredientRegistry
+from barcart.registry import Registry
 
 
-class TestIngredientRegistryInit:
-    """Test IngredientRegistry initialization and validation."""
+class TestRegistryInit:
+    """Test Registry initialization and validation."""
 
     def test_basic_construction(self):
-        """Test basic registry construction."""
-        ingredients = [(0, "123", "Gin"), (1, "456", "Vodka"), (2, "789", "Rum")]
-        registry = IngredientRegistry(ingredients)
+        """Test basic registry construction with valid data."""
+        entities = [(0, "123", "Gin"), (1, "456", "Vodka"), (2, "789", "Rum")]
+        registry = Registry(entities)
         assert len(registry) == 3
 
-    def test_empty_ingredients_raises(self):
-        """Test that empty ingredient list raises ValueError."""
+    def test_empty_entities_raises(self):
+        """Test that empty entity list raises ValueError."""
         with pytest.raises(ValueError, match="cannot be empty"):
-            IngredientRegistry([])
+            Registry([])
 
     def test_non_contiguous_indices_raises(self):
         """Test that non-contiguous indices raise ValueError."""
-        ingredients = [(0, "123", "Gin"), (2, "456", "Vodka")]  # Missing index 1
+        entities = [(0, "123", "Gin"), (2, "456", "Vodka")]  # Missing index 1
         with pytest.raises(ValueError, match="contiguous"):
-            IngredientRegistry(ingredients)
+            Registry(entities)
 
     def test_indices_not_starting_at_zero_raises(self):
         """Test that indices not starting at 0 raise ValueError."""
-        ingredients = [(1, "123", "Gin"), (2, "456", "Vodka")]
+        entities = [(1, "123", "Gin"), (2, "456", "Vodka")]
         with pytest.raises(ValueError, match="contiguous"):
-            IngredientRegistry(ingredients)
+            Registry(entities)
 
     def test_duplicate_ids_raises(self):
         """Test that duplicate IDs raise ValueError."""
-        ingredients = [(0, "123", "Gin"), (1, "123", "Vodka")]
-        with pytest.raises(ValueError, match="Duplicate ingredient IDs"):
-            IngredientRegistry(ingredients)
+        entities = [(0, "123", "Gin"), (1, "123", "Vodka")]
+        with pytest.raises(ValueError, match="Duplicate entity IDs"):
+            Registry(entities)
 
     def test_duplicate_names_warns(self):
         """Test that duplicate names trigger a warning."""
-        ingredients = [(0, "123", "Gin"), (1, "456", "Gin")]
+        entities = [(0, "123", "Gin"), (1, "456", "Gin")]
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            IngredientRegistry(ingredients)
+            Registry(entities)
             assert len(w) == 1
-            assert "Duplicate ingredient names" in str(w[0].message)
+            assert "Duplicate entity names" in str(w[0].message)
 
     def test_out_of_order_indices_sorted(self):
-        """Test that out-of-order ingredients are sorted by index."""
-        ingredients = [(2, "789", "Rum"), (0, "123", "Gin"), (1, "456", "Vodka")]
-        registry = IngredientRegistry(ingredients)
+        """Test that out-of-order entities are sorted by index."""
+        entities = [(2, "789", "Rum"), (0, "123", "Gin"), (1, "456", "Vodka")]
+        registry = Registry(entities)
         assert registry[0] == ("123", "Gin")
         assert registry[1] == ("456", "Vodka")
         assert registry[2] == ("789", "Rum")
 
 
-class TestIngredientRegistryGetName:
+class TestRegistryGetName:
     """Test get_name method."""
 
     @pytest.fixture
     def registry(self):
         """Create a test registry."""
-        ingredients = [(0, "123", "Gin"), (1, "456", "Vodka"), (2, "789", "Rum")]
-        return IngredientRegistry(ingredients)
+        entities = [(0, "123", "Gin"), (1, "456", "Vodka"), (2, "789", "Rum")]
+        return Registry(entities)
 
     def test_get_name_by_index(self, registry):
         """Test getting name by matrix index."""
@@ -102,14 +102,14 @@ class TestIngredientRegistryGetName:
             registry.get_name(id="999")
 
 
-class TestIngredientRegistryGetId:
+class TestRegistryGetId:
     """Test get_id method."""
 
     @pytest.fixture
     def registry(self):
         """Create a test registry."""
-        ingredients = [(0, "123", "Gin"), (1, "456", "Vodka"), (2, "789", "Rum")]
-        return IngredientRegistry(ingredients)
+        entities = [(0, "123", "Gin"), (1, "456", "Vodka"), (2, "789", "Rum")]
+        return Registry(entities)
 
     def test_get_id_by_index(self, registry):
         """Test getting ID by matrix index."""
@@ -144,14 +144,14 @@ class TestIngredientRegistryGetId:
             registry.get_id(name="Tequila")
 
 
-class TestIngredientRegistryGetIndex:
+class TestRegistryGetIndex:
     """Test get_index method."""
 
     @pytest.fixture
     def registry(self):
         """Create a test registry."""
-        ingredients = [(0, "123", "Gin"), (1, "456", "Vodka"), (2, "789", "Rum")]
-        return IngredientRegistry(ingredients)
+        entities = [(0, "123", "Gin"), (1, "456", "Vodka"), (2, "789", "Rum")]
+        return Registry(entities)
 
     def test_get_index_by_id(self, registry):
         """Test getting index by ingredient ID."""
@@ -186,14 +186,14 @@ class TestIngredientRegistryGetIndex:
             registry.get_index(name="Tequila")
 
 
-class TestIngredientRegistryConvenience:
+class TestRegistryConvenience:
     """Test convenience methods."""
 
     @pytest.fixture
     def registry(self):
         """Create a test registry."""
-        ingredients = [(0, "123", "Gin"), (1, "456", "Vodka"), (2, "789", "Rum")]
-        return IngredientRegistry(ingredients)
+        entities = [(0, "123", "Gin"), (1, "456", "Vodka"), (2, "789", "Rum")]
+        return Registry(entities)
 
     def test_len(self, registry):
         """Test __len__ method."""
@@ -244,13 +244,13 @@ class TestIngredientRegistryConvenience:
         assert "999" not in registry.to_id_to_index()
 
 
-class TestIngredientRegistryLazyNameIndex:
+class TestRegistryLazyNameIndex:
     """Test lazy initialization of name-to-index mapping."""
 
     def test_name_index_built_on_first_use(self):
         """Test that name index is built lazily."""
-        ingredients = [(0, "123", "Gin"), (1, "456", "Vodka")]
-        registry = IngredientRegistry(ingredients)
+        entities = [(0, "123", "Gin"), (1, "456", "Vodka")]
+        registry = Registry(entities)
 
         # Name index should be None initially
         assert registry._name_to_idx is None
@@ -265,19 +265,19 @@ class TestIngredientRegistryLazyNameIndex:
         assert registry._name_to_idx == {"Gin": 0, "Vodka": 1}
 
 
-class TestIngredientRegistryTypeNormalization:
+class TestRegistryTypeNormalization:
     """Test that various input types are normalized to strings."""
 
     def test_int_ids_converted_to_strings(self):
         """Test that integer IDs are converted to strings."""
-        ingredients = [(0, 123, "Gin"), (1, 456, "Vodka")]
-        registry = IngredientRegistry(ingredients)
+        entities = [(0, 123, "Gin"), (1, 456, "Vodka")]
+        registry = Registry(entities)
         assert registry.get_id(index=0) == "123"
         assert registry.get_name(id="123") == "Gin"
 
     def test_mixed_type_ids_normalized(self):
         """Test that mixed ID types are normalized."""
-        ingredients = [(0, "123", "Gin"), (1, 456, "Vodka")]
-        registry = IngredientRegistry(ingredients)
+        entities = [(0, "123", "Gin"), (1, 456, "Vodka")]
+        registry = Registry(entities)
         assert registry.get_id(index=1) == "456"
         assert registry.get_index(id="456") == 1

@@ -5,18 +5,21 @@ import warnings
 import numpy as np
 
 
-class IngredientRegistry:
+class Registry:
     """
-    Central registry mapping matrix indices ↔ ingredient IDs ↔ names.
+    Central registry mapping matrix indices ↔ entity IDs ↔ names.
 
-    This class provides a single source of truth for ingredient metadata,
-    replacing the previous pattern of passing around separate id_to_index,
+    Generic registry for any entity type (ingredients, recipes, etc.).
+
+    This class provides a single source of truth for entity metadata,
+    supporting any entity type (ingredients, recipes, etc.). It replaces
+    the previous pattern of passing around separate id_to_index,
     index_to_id, and id_to_name dictionaries.
 
     Parameters
     ----------
-    ingredients : list of tuple
-        List of (matrix_index, ingredient_id, ingredient_name) tuples.
+    entities : list of tuple
+        List of (matrix_index, entity_id, entity_name) tuples.
         Matrix indices must be contiguous integers starting at 0.
 
     Attributes
@@ -25,8 +28,8 @@ class IngredientRegistry:
 
     Examples
     --------
-    >>> ingredients = [(0, "123", "Gin"), (1, "456", "Vodka")]
-    >>> registry = IngredientRegistry(ingredients)
+    >>> entities = [(0, "123", "Gin"), (1, "456", "Vodka")]
+    >>> registry = Registry(entities)
     >>> registry.get_name(index=0)
     'Gin'
     >>> registry.get_index(id="456")
@@ -35,59 +38,59 @@ class IngredientRegistry:
     2
     """
 
-    def __init__(self, ingredients: list[tuple[int, str, str]]):
+    def __init__(self, entities: list[tuple[int, str, str]]):
         """
-        Initialize the registry with ingredient data.
+        Initialize the registry with entity data.
 
         Parameters
         ----------
-        ingredients : list of tuple
-            List of (matrix_index, ingredient_id, ingredient_name) tuples.
+        entities : list of tuple
+            List of (matrix_index, entity_id, entity_name) tuples.
 
         Raises
         ------
         ValueError
             If matrix indices are not contiguous 0..N-1, or if duplicate IDs found.
         """
-        self._validate_ingredients(ingredients)
+        self._validate_entities(entities)
 
         # Sort by index to ensure arrays are in matrix order
-        ingredients_sorted = sorted(ingredients, key=lambda x: x[0])
+        entities_sorted = sorted(entities, key=lambda x: x[0])
 
         # Store as parallel numpy arrays for fast index-based access
-        self._indices = np.array([idx for idx, _, _ in ingredients_sorted], dtype=int)
-        self._ids = np.array([str(id) for _, id, _ in ingredients_sorted], dtype=object)
+        self._indices = np.array([idx for idx, _, _ in entities_sorted], dtype=int)
+        self._ids = np.array([str(id) for _, id, _ in entities_sorted], dtype=object)
         self._names = np.array(
-            [str(name) for _, _, name in ingredients_sorted], dtype=object
+            [str(name) for _, _, name in entities_sorted], dtype=object
         )
 
         # Build reverse lookup dicts
-        self._id_to_idx = {str(id): idx for idx, id, _ in ingredients_sorted}
+        self._id_to_idx = {str(id): idx for idx, id, _ in entities_sorted}
         self._name_to_idx: dict[str, int] | None = (
             None  # Lazy initialization on first use
         )
 
-    def _validate_ingredients(self, ingredients: list[tuple[int, str, str]]) -> None:
+    def _validate_entities(self, entities: list[tuple[int, str, str]]) -> None:
         """
-        Validate ingredient data quality.
+        Validate entity data quality.
 
         Parameters
         ----------
-        ingredients : list of tuple
-            List of (matrix_index, ingredient_id, ingredient_name) tuples.
+        entities : list of tuple
+            List of (matrix_index, entity_id, entity_name) tuples.
 
         Raises
         ------
         ValueError
             If validation fails.
         """
-        if not ingredients:
-            raise ValueError("ingredients list cannot be empty")
+        if not entities:
+            raise ValueError("entities list cannot be empty")
 
         # Extract components
-        indices = [idx for idx, _, _ in ingredients]
-        ids = [str(id) for _, id, _ in ingredients]
-        names = [str(name) for _, _, name in ingredients]
+        indices = [idx for idx, _, _ in entities]
+        ids = [str(id) for _, id, _ in entities]
+        names = [str(name) for _, _, name in entities]
 
         # 1. Matrix indices must be contiguous 0..N-1
         if sorted(indices) != list(range(len(indices))):
@@ -99,12 +102,12 @@ class IngredientRegistry:
         # 2. IDs must be unique
         if len(ids) != len(set(ids)):
             duplicates = {id for id in ids if ids.count(id) > 1}
-            raise ValueError(f"Duplicate ingredient IDs found: {duplicates}")
+            raise ValueError(f"Duplicate entity IDs found: {duplicates}")
 
         # 3. Names should be unique (warn if not, don't fail)
         if len(names) != len(set(names)):
             duplicates = {name for name in names if names.count(name) > 1}
-            warnings.warn(f"Duplicate ingredient names found: {duplicates}")
+            warnings.warn(f"Duplicate entity names found: {duplicates}")
 
     def get_name(self, index: int | None = None, id: str | int | None = None) -> str:
         """
@@ -133,6 +136,7 @@ class IngredientRegistry:
 
         Examples
         --------
+        >>> registry = Registry([(0, "123", "Gin")])
         >>> registry.get_name(index=0)
         'Gin'
         >>> registry.get_name(id="123")
@@ -178,6 +182,7 @@ class IngredientRegistry:
 
         Examples
         --------
+        >>> registry = Registry([(0, "123", "Gin")])
         >>> registry.get_id(index=0)
         '123'
         >>> registry.get_id(name="Gin")
@@ -225,6 +230,7 @@ class IngredientRegistry:
 
         Examples
         --------
+        >>> registry = Registry([(0, "123", "Gin")])
         >>> registry.get_index(id="123")
         0
         >>> registry.get_index(name="Gin")
@@ -248,7 +254,7 @@ class IngredientRegistry:
             return int(self._name_to_idx[name])
 
     def __len__(self) -> int:
-        """Return the number of ingredients in the registry."""
+        """Return the number of entities in the registry."""
         return len(self._ids)
 
     def __getitem__(self, index: int) -> tuple[str, str]:
@@ -263,10 +269,11 @@ class IngredientRegistry:
         Returns
         -------
         tuple of str
-            (ingredient_id, ingredient_name)
+            (entity_id, entity_name)
 
         Examples
         --------
+        >>> registry = Registry([(0, "123", "Gin")])
         >>> registry[0]
         ('123', 'Gin')
         """
@@ -286,10 +293,11 @@ class IngredientRegistry:
         Raises
         ------
         ValueError
-            If matrix shape is incompatible with ingredient count.
+            If matrix shape is incompatible with entity count.
 
         Examples
         --------
+        >>> registry = Registry([(0, "123", "Gin"), (1, "456", "Vodka")])
         >>> registry.validate_matrix(np.zeros((2, 2)))  # OK
         >>> registry.validate_matrix(np.zeros((3, 3)))  # Raises ValueError
         """
@@ -298,12 +306,12 @@ class IngredientRegistry:
         if matrix.shape[0] != len(self) or matrix.shape[1] != len(self):
             raise ValueError(
                 f"Matrix shape {matrix.shape} incompatible with "
-                f"{len(self)} ingredients (expected ({len(self)}, {len(self)}))"
+                f"{len(self)} entities (expected ({len(self)}, {len(self)}))"
             )
 
     def to_id_to_index(self) -> dict[str, int]:
         """
-        Export as {ingredient_id: matrix_index} dict for legacy compatibility.
+        Export as {entity_id: matrix_index} dict for legacy compatibility.
 
         Returns
         -------

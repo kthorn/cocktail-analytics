@@ -1,11 +1,11 @@
-"""Integration tests for IngredientRegistry with distance matrix functions."""
+"""Integration tests for Registry with distance matrix functions."""
 
 import numpy as np
 import pandas as pd
 import pytest
 
 from barcart import (
-    IngredientRegistry,
+    Registry,
     build_ingredient_distance_matrix,
     build_ingredient_tree,
     report_ingredient_neighbors,
@@ -25,7 +25,7 @@ def sample_ingredient_df():
 
 
 class TestBuildIngredientDistanceMatrixIntegration:
-    """Test build_ingredient_distance_matrix with IngredientRegistry."""
+    """Test build_ingredient_distance_matrix with Registry."""
 
     def test_returns_matrix_and_registry(self, sample_ingredient_df):
         """Test that function returns both matrix and registry."""
@@ -43,7 +43,7 @@ class TestBuildIngredientDistanceMatrixIntegration:
         assert len(result) == 2
         matrix, registry = result
         assert isinstance(matrix, np.ndarray)
-        assert isinstance(registry, IngredientRegistry)
+        assert isinstance(registry, Registry)
 
     def test_handles_integer_ids_in_id_to_name(self, sample_ingredient_df):
         """Test that integer IDs in id_to_name are handled correctly."""
@@ -180,7 +180,7 @@ class TestBuildIngredientDistanceMatrixIntegration:
 
 
 class TestReportIngredientNeighborsIntegration:
-    """Test report_ingredient_neighbors with IngredientRegistry."""
+    """Test report_ingredient_neighbors with Registry."""
 
     def test_report_neighbors_produces_dataframe(self, sample_ingredient_df):
         """Test that report_ingredient_neighbors returns a DataFrame."""
@@ -283,7 +283,7 @@ class TestEndToEndWorkflow:
     """Test complete workflow from tree building to neighbor reporting."""
 
     def test_full_pipeline(self, sample_ingredient_df):
-        """Test the complete pipeline with IngredientRegistry."""
+        """Test the complete pipeline with Registry."""
         # Step 1: Build tree
         tree, parent_map = build_ingredient_tree(sample_ingredient_df)
 

@@ -200,7 +200,7 @@ def build_ingredient_distance_matrix(
     parent_map: dict[str, tuple[str | None, float]],
     id_to_name: dict[str | int, str],
     root_id: str = "root",
-) -> tuple[np.ndarray, "IngredientRegistry"]:
+) -> tuple[np.ndarray, "Registry"]:
     """
     Build a pairwise distance matrix and ingredient registry together.
 
@@ -226,7 +226,7 @@ def build_ingredient_distance_matrix(
     distance_matrix : np.ndarray
         A symmetric 2D array of shape (n, n) where n is the number of non-root nodes.
         Each entry (i, j) is the weighted tree distance between nodes i and j.
-    registry : IngredientRegistry
+    registry : Registry
         Metadata for the n ingredients (excluding root), guaranteed to match matrix dimensions.
 
     Notes
@@ -235,7 +235,7 @@ def build_ingredient_distance_matrix(
     The registry is built from the same ingredient ordering as the matrix.
     The root node is excluded as it's an implicit structural element, not an ingredient.
     """
-    from barcart.registry import IngredientRegistry
+    from barcart.registry import Registry
 
     # Exclude root node from ingredient list
     ingredient_ids = [id for id in parent_map.keys() if id != root_id]
@@ -249,7 +249,7 @@ def build_ingredient_distance_matrix(
         (idx, str(ing_id), str(id_to_name_normalized.get(str(ing_id), f"id:{ing_id}")))
         for ing_id, idx in id_to_index.items()
     ]
-    registry = IngredientRegistry(ingredients)
+    registry = Registry(ingredients)
 
     # Build distance matrix
     distance_matrix = np.zeros((len(ingredient_ids), len(ingredient_ids)))
@@ -264,7 +264,7 @@ def build_ingredient_distance_matrix(
 
 def build_recipe_volume_matrix(
     recipes_df: pd.DataFrame,
-    registry: "IngredientRegistry",
+    registry: "Registry",
     recipe_id_col: str = "recipe_id",
     ingredient_id_col: str = "ingredient_id",
     volume_col: str = "volume_fraction",
@@ -280,7 +280,7 @@ def build_recipe_volume_matrix(
     ----------
     recipes_df : pd.DataFrame
         DataFrame containing at least recipe IDs, ingredient IDs, and volume fractions.
-    registry : IngredientRegistry
+    registry : Registry
         Ingredient metadata registry providing ID to matrix index mapping.
     recipe_id_col : str, optional
         Column name for recipe IDs. Default is "recipe_id".
@@ -598,11 +598,11 @@ def _normalize_id_to_name_keys(
 
 def report_ingredient_neighbors(
     cost_matrix: np.ndarray,
-    registry: "IngredientRegistry",
+    registry: "Registry",
     k: int,
 ) -> pd.DataFrame:
     """
-    Report k nearest neighbors per ingredient using IngredientRegistry.
+    Report k nearest neighbors per ingredient using Registry.
 
     Parameters
     ----------
@@ -610,7 +610,7 @@ def report_ingredient_neighbors(
         Pairwise cost/distance matrix of shape (n_ingredients, n_ingredients).
     k : int
         Number of neighbors to report per ingredient (excluding self).
-    registry : IngredientRegistry
+    registry : Registry
         Ingredient metadata registry with IDs and names.
 
     Returns
@@ -623,7 +623,7 @@ def report_ingredient_neighbors(
     >>> cost_matrix, registry = build_ingredient_distance_matrix(parent_map, id_to_name)
     >>> neighbors_df = report_ingredient_neighbors(cost_matrix, k=5, registry)
     """
-    from barcart.registry import IngredientRegistry
+    from barcart.registry import Registry
 
     # Validate matrix dimensions match registry
     registry.validate_matrix(cost_matrix)

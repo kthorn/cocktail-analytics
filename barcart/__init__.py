@@ -27,11 +27,11 @@ from barcart.distance import (
     # Distance computations
     weighted_distance,
 )
-from barcart.registry import IngredientRegistry
+from barcart.registry import Registry
 
 __all__ = [
     # Core types
-    "IngredientRegistry",
+    "Registry",
     # Tree building
     "build_ingredient_tree",
     # Distance computations
