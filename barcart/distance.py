@@ -198,14 +198,14 @@ def weighted_distance(
 
 def build_ingredient_distance_matrix(
     parent_map: dict[str, tuple[str | None, float]],
-) -> tuple[np.ndarray, dict[str, int]]:
+    id_to_name: dict[str | int, str],
+) -> tuple[np.ndarray, "IngredientRegistry"]:
     """
-    Build a pairwise distance matrix for all ingredients in the tree.
+    Build a pairwise distance matrix and ingredient registry together.
 
     Computes the weighted distance between every pair of nodes (ingredients) in the tree,
-    using the parent_map produced by `build_ingredient_tree`. The result is a symmetric
-    matrix where each entry (i, j) represents the weighted distance between nodes with
-    identifiers corresponding to those indices in the id_to_index dictionary.
+    using the parent_map produced by `build_ingredient_tree`. The registry and matrix
+    are constructed atomically to ensure they stay in sync.
 
     Parameters
     ----------
@@ -213,22 +213,38 @@ def build_ingredient_distance_matrix(
         Dictionary mapping each node (ingredient ID as a string) to a tuple of (parent_id, edge_weight),
         where parent_id is the parent node ID (or None for the root),
         and edge_weight is the cost to reach that parent.
+    id_to_name : dict of str or int to str
+        Mapping from ingredient ID to human-readable name.
 
     Returns
     -------
     distance_matrix : np.ndarray
         A symmetric 2D array of shape (n, n) where n is the number of nodes in parent_map.
         Each entry (i, j) is the weighted tree distance between nodes i and j.
-    id_to_index : dict of str to int
-        Mapping from node/ingredient ID (as a string) to its corresponding index in the matrix.
+    registry : IngredientRegistry
+        Metadata for the n ingredients, guaranteed to match matrix dimensions.
 
     Notes
     -----
-    The node IDs/keys in parent_map are used as matrix indices via id_to_index.
     The function relies on `weighted_distance` to compute tree distances.
+    The registry is built from the same ingredient ordering as the matrix.
     """
+    from barcart.registry import IngredientRegistry
+
     ingredient_ids = list(parent_map.keys())
     id_to_index = {id: i for i, id in enumerate(ingredient_ids)}
+
+    # Normalize id_to_name to use string keys (handles int/str mismatch)
+    id_to_name_normalized = {str(k): v for k, v in id_to_name.items()}
+
+    # Build registry immediately (same construction, guaranteed consistent)
+    ingredients = [
+        (idx, str(ing_id), str(id_to_name_normalized.get(str(ing_id), f"id:{ing_id}")))
+        for ing_id, idx in id_to_index.items()
+    ]
+    registry = IngredientRegistry(ingredients)
+
+    # Build distance matrix
     distance_matrix = np.zeros((len(ingredient_ids), len(ingredient_ids)))
     for i in range(len(ingredient_ids)):
         for j in range(i + 1, len(ingredient_ids)):
@@ -236,7 +252,7 @@ def build_ingredient_distance_matrix(
                 ingredient_ids[i], ingredient_ids[j], parent_map
             )
             distance_matrix[j, i] = distance_matrix[i, j]
-    return distance_matrix, id_to_index
+    return distance_matrix, registry
 
 
 def build_recipe_volume_matrix(
@@ -575,12 +591,11 @@ def _normalize_id_to_name_keys(
 
 def report_ingredient_neighbors(
     cost_matrix: np.ndarray,
+    registry: "IngredientRegistry",
     k: int,
-    id_to_name: dict[str | int, str],
-    index_to_id: list[str],
 ) -> pd.DataFrame:
     """
-    Report k nearest neighbors per ingredient with stable ID/index/name mapping.
+    Report k nearest neighbors per ingredient using IngredientRegistry.
 
     Parameters
     ----------
@@ -588,38 +603,35 @@ def report_ingredient_neighbors(
         Pairwise cost/distance matrix of shape (n_ingredients, n_ingredients).
     k : int
         Number of neighbors to report per ingredient (excluding self).
-    id_to_name : dict
-        Mapping from ingredient ID (int or str) to human-readable name.
-    index_to_id : list[str]
-        List mapping matrix index -> ingredient ID (as string), typically from
-        build_index_to_id(id_to_index).
+    registry : IngredientRegistry
+        Ingredient metadata registry with IDs and names.
 
     Returns
     -------
     pd.DataFrame
         Columns: ingredient_id, ingredient_name, neighbor_id, neighbor_name, cost
-    """
-    if cost_matrix.shape[0] != cost_matrix.shape[1]:
-        raise ValueError("cost_matrix must be square")
-    if cost_matrix.shape[0] != len(index_to_id):
-        raise ValueError(
-            "index_to_id length must match cost_matrix size; build with build_index_to_id"
-        )
 
-    # Ensure consistent string ID keys for name lookup
-    id_to_name_str = _normalize_id_to_name_keys(id_to_name)
+    Examples
+    --------
+    >>> cost_matrix, registry = build_ingredient_distance_matrix(parent_map, id_to_name)
+    >>> neighbors_df = report_ingredient_neighbors(cost_matrix, k=5, registry)
+    """
+    from barcart.registry import IngredientRegistry
+
+    # Validate matrix dimensions match registry
+    registry.validate_matrix(cost_matrix)
 
     nn_idx, nn_dist = knn_matrix(cost_matrix, k)
 
     records: list[dict[str, str | float]] = []
-    for ing_idx in range(cost_matrix.shape[0]):
-        ing_id = index_to_id[int(ing_idx)]
-        ing_name = id_to_name_str.get(ing_id, f"id:{ing_id}")
+    for ing_idx in range(len(registry)):
+        ing_id = registry.get_id(index=ing_idx)
+        ing_name = registry.get_name(index=ing_idx)
 
         for neighbor_idx, cost in zip(nn_idx[ing_idx], nn_dist[ing_idx], strict=False):
             n_idx = int(neighbor_idx)
-            neighbor_id = index_to_id[n_idx]
-            neighbor_name = id_to_name_str.get(neighbor_id, f"id:{neighbor_id}")
+            neighbor_id = registry.get_id(index=n_idx)
+            neighbor_name = registry.get_name(index=n_idx)
 
             records.append(
                 {
