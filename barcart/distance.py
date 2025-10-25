@@ -1,5 +1,5 @@
 import math
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 import ot
@@ -16,7 +16,7 @@ def build_ingredient_tree(
     root_id: str = "root",
     root_name: str = "root",
     default_edge_weight: float = 1.0,
-) -> Tuple[Dict[str, Any], Dict[str, Tuple[Optional[str], float]]]:
+) -> tuple[dict[str, Any], dict[str, tuple[str | None, float]]]:
     """
     Build a D3-compatible ingredient hierarchy tree and a parent map for weighted distances.
 
@@ -73,10 +73,10 @@ def build_ingredient_tree(
             weight_by_id[cid] = float(row[weight_col])
 
     # Collect nodes and edges from paths
-    nodes: Dict[str, Dict[str, Any]] = {}
-    children_map: Dict[str, set] = {}
-    edge_w: Dict[Tuple[str, str], float] = {}
-    parent_map: Dict[str, Tuple[Optional[str], float]] = {}
+    nodes: dict[str, dict[str, Any]] = {}
+    children_map: dict[str, set] = {}
+    edge_w: dict[tuple[str, str], float] = {}
+    parent_map: dict[str, tuple[str | None, float]] = {}
 
     def ensure_node(nid: str):
         if nid not in nodes:
@@ -123,7 +123,7 @@ def build_ingredient_tree(
             parent_map[child_id] = (parent_id, w)
 
     # Build nested dict recursively for D3
-    def build_subtree(pid: str) -> Dict[str, Any]:
+    def build_subtree(pid: str) -> dict[str, Any]:
         node = {"id": pid, "name": nodes[pid]["name"]}
         kids = []
         for cid in children_map.get(pid, []):
@@ -142,7 +142,7 @@ def build_ingredient_tree(
 def weighted_distance(
     u: str | int,
     v: str | int,
-    parent_map: Dict[str, Tuple[Optional[str], float]],
+    parent_map: dict[str, tuple[str | None, float]],
 ) -> float:
     """
     Compute the weighted distance between two nodes in a tree.
@@ -197,8 +197,8 @@ def weighted_distance(
 
 
 def build_ingredient_distance_matrix(
-    parent_map: Dict[str, Tuple[Optional[str], float]],
-) -> Tuple[np.ndarray, dict[str, int]]:
+    parent_map: dict[str, tuple[str | None, float]],
+) -> tuple[np.ndarray, dict[str, int]]:
     """
     Build a pairwise distance matrix for all ingredients in the tree.
 
@@ -320,8 +320,8 @@ def compute_emd(
     b: np.ndarray,
     cost_matrix: np.ndarray,
     return_plan: bool = False,
-    support_idx: Optional[np.ndarray] = None,
-) -> Union[float, Tuple[float, List[Tuple[int, int, float, float]]]]:
+    support_idx: np.ndarray | None = None,
+) -> float | tuple[float, list[tuple[int, int, float, float]]]:
     """
     Compute the Earth Mover's Distance (EMD) between two distributions a and b.
 
@@ -374,9 +374,9 @@ def compute_emd(
     else:
         transport_matrix = ot.emd(a_sub, b_sub, cost_sub)
         distance = float(np.sum(transport_matrix * cost_sub))
-        transport_plan: List[Tuple[int, int, float, float]] = []
+        transport_plan: list[tuple[int, int, float, float]] = []
         rows, cols = np.nonzero(transport_matrix > 1e-10)
-        for ii, jj in zip(rows, cols):
+        for ii, jj in zip(rows, cols, strict=False):
             flow = float(transport_matrix[ii, jj])
             flow_cost = float(flow * cost_sub[ii, jj])
             # Map back to original indices via support_idx
@@ -403,7 +403,7 @@ def emd_matrix(
     emd_matrix = np.zeros((n_recipes, n_recipes))
 
     # Precompute supports for each recipe to avoid repeated nonzero scans
-    supports: List[np.ndarray] = [
+    supports: list[np.ndarray] = [
         np.nonzero(volume_matrix[i] > 0)[0] for i in range(n_recipes)
     ]
 
@@ -463,7 +463,7 @@ def emd_matrix(
                 emd_matrix[j, i] = distance
         return (emd_matrix, plans) if return_plans else emd_matrix
 
-    pairs: List[Tuple[int, int]] = [
+    pairs: list[tuple[int, int]] = [
         (i, j) for i in range(n_recipes) for j in range(i + 1, n_recipes)
     ]
 
@@ -565,8 +565,8 @@ def build_index_to_id(id_to_index: dict[str, int]) -> list[str]:
 
 
 def _normalize_id_to_name_keys(
-    id_to_name: Dict[Union[str, int], str],
-) -> Dict[str, str]:
+    id_to_name: dict[str | int, str],
+) -> dict[str, str]:
     """
     Normalize an id->name mapping to use string keys consistently.
     """
@@ -576,8 +576,8 @@ def _normalize_id_to_name_keys(
 def report_ingredient_neighbors(
     cost_matrix: np.ndarray,
     k: int,
-    id_to_name: Dict[Union[str, int], str],
-    index_to_id: List[str],
+    id_to_name: dict[str | int, str],
+    index_to_id: list[str],
 ) -> pd.DataFrame:
     """
     Report k nearest neighbors per ingredient with stable ID/index/name mapping.
@@ -611,12 +611,12 @@ def report_ingredient_neighbors(
 
     nn_idx, nn_dist = knn_matrix(cost_matrix, k)
 
-    records: List[Dict[str, Union[str, float]]] = []
+    records: list[dict[str, str | float]] = []
     for ing_idx in range(cost_matrix.shape[0]):
         ing_id = index_to_id[int(ing_idx)]
         ing_name = id_to_name_str.get(ing_id, f"id:{ing_id}")
 
-        for neighbor_idx, cost in zip(nn_idx[ing_idx], nn_dist[ing_idx]):
+        for neighbor_idx, cost in zip(nn_idx[ing_idx], nn_dist[ing_idx], strict=False):
             n_idx = int(neighbor_idx)
             neighbor_id = index_to_id[n_idx]
             neighbor_name = id_to_name_str.get(neighbor_id, f"id:{neighbor_id}")
@@ -639,7 +639,7 @@ def neighbor_weight_matrix(
     k: int,
     beta: float,
     symmetrize: bool = True,
-) -> Tuple[np.ndarray, int]:
+) -> tuple[np.ndarray, int]:
     """
     Build a neighbor-weighted matrix from a pairwise distance matrix using kNN.
 
@@ -675,7 +675,7 @@ def neighbor_weight_matrix(
         # Boltzmann weights per row, stabilized by subtracting min
         w = np.exp(-beta * (d - d.min()))
         w /= w.sum() + 1e-12
-        for w_rs, s in zip(w, nn_idx[r]):
+        for w_rs, s in zip(w, nn_idx[r], strict=False):
             W[r, int(s)] += float(w_rs)
 
     if symmetrize:
@@ -688,10 +688,10 @@ def neighbor_weight_matrix(
 
 
 def _sparsify_transport_plan(
-    plan: List[Tuple[int, int, float, float]],
-    topk: Optional[int],
+    plan: list[tuple[int, int, float, float]],
+    topk: int | None,
     min_fraction_of_max: float,
-) -> List[Tuple[int, int, float, float]]:
+) -> list[tuple[int, int, float, float]]:
     """
     Keep only the largest transport flows by amount.
 
@@ -726,10 +726,10 @@ def expected_ingredient_match_matrix(
     cost_matrix: np.ndarray,
     k: int,
     beta: float,
-    plan_topk: Optional[int] = None,
+    plan_topk: int | None = None,
     plan_minfrac: float = 0.0,
     symmetrize: bool = True,
-) -> Tuple[np.ndarray, int]:
+) -> tuple[np.ndarray, int]:
     """
     Aggregate expected ingredient match counts (T_sum) from kNN recipe pairs.
 
@@ -775,7 +775,7 @@ def expected_ingredient_match_matrix(
         z = float(w.sum())
         if z > 0:
             w /= z
-        for w_rs, s in zip(w, nn_idx[r]):
+        for w_rs, s in zip(w, nn_idx[r], strict=False):
             i, j = (r, int(s)) if r < int(s) else (int(s), r)
             plan = plans.get((i, j), [])
             if plan_topk is not None or plan_minfrac > 0:
@@ -801,7 +801,7 @@ def m_step_blosum(
     T_sum: np.ndarray,
     blosum_alpha: float,
     prior_blend: float,
-    clamp: Optional[Tuple[float, float]] = None,
+    clamp: tuple[float, float] | None = None,
     median_target: float = 1.0,
 ) -> np.ndarray:
     """
