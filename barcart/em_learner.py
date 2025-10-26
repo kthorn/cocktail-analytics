@@ -1,6 +1,7 @@
-from barcart.distance import m_step_blosum, emd_matrix, expected_ingredient_match_matrix
 import numpy as np
 from tqdm.auto import tqdm
+
+from barcart.distance import emd_matrix, expected_ingredient_match_matrix, m_step_blosum
 
 
 def em_fit(
@@ -61,9 +62,16 @@ def em_fit(
     >>> print(f"Converged after {len(log['delta'])} iterations")
     """
     log = {"delta": []}
-    for t in tqdm(range(iters), disable=not verbose):
+    outer_bar = tqdm(
+        range(iters), disable=not verbose, desc="EM fit", position=0, leave=False
+    )
+    for t in outer_bar:
         distance_matrix, plans = emd_matrix(
-            volume_matrix, previous_cost_matrix, return_plans=True
+            volume_matrix,
+            previous_cost_matrix,
+            return_plans=True,
+            tqdm_cls=tqdm,
+            tqdm_kwargs={"position": 1, "leave": False},
         )
         T_sum, n_pairs = expected_ingredient_match_matrix(
             distance_matrix,

@@ -440,6 +440,9 @@ def emd_matrix(
     cost_matrix: np.ndarray,
     n_jobs: int = 1,
     return_plans: bool = False,
+    *,
+    tqdm_cls: Any | None = None,
+    tqdm_kwargs: dict[str, Any] | None = None,
 ) -> np.ndarray:
     """
     Compute the Earth Mover's Distance matrix between all recipes in the volume matrix.
@@ -458,7 +461,11 @@ def emd_matrix(
 
     if n_jobs == 1:
         plans = {} if return_plans else None
-        for i in tqdm(range(n_recipes), desc="Computing EMD matrix"):
+        _tqdm = tqdm_cls if tqdm_cls is not None else tqdm
+        _tk = {"desc": "Computing EMD matrix"}
+        if tqdm_kwargs:
+            _tk.update(tqdm_kwargs)
+        for i in _tqdm(range(n_recipes), **_tk):
             for j in range(i + 1, n_recipes):
                 union_idx = np.union1d(supports[i], supports[j])
                 if return_plans:
@@ -488,7 +495,11 @@ def emd_matrix(
     except ImportError:
         # Fallback to sequential if joblib is not available
         plans = {} if return_plans else None
-        for i in tqdm(range(n_recipes), desc="Computing EMD matrix"):
+        _tqdm = tqdm_cls if tqdm_cls is not None else tqdm
+        _tk = {"desc": "Computing EMD matrix"}
+        if tqdm_kwargs:
+            _tk.update(tqdm_kwargs)
+        for i in _tqdm(range(n_recipes), **_tk):
             for j in range(i + 1, n_recipes):
                 union_idx = np.union1d(supports[i], supports[j])
                 if return_plans:

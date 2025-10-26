@@ -1,8 +1,8 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-from barcart.registry import Registry
 from barcart.distance import knn_matrix
+from barcart.registry import Registry
 
 
 def report_neighbors(
