@@ -266,7 +266,7 @@ def build_ingredient_distance_matrix(
 
 def build_recipe_volume_matrix(
     recipes_df: pd.DataFrame,
-    registry: "Registry",
+    ingredient_registry: "Registry",
     recipe_id_col: str = "recipe_id",
     recipe_name_col: str = "recipe_name",
     ingredient_id_col: str = "ingredient_id",
@@ -285,7 +285,7 @@ def build_recipe_volume_matrix(
     ----------
     recipes_df : pd.DataFrame
         DataFrame containing at least recipe IDs, recipe names, ingredient IDs, and volume fractions.
-    registry : Registry
+    ingredient_registry : Registry
         Ingredient metadata registry providing ID to matrix index mapping.
     recipe_id_col : str, optional
         Column name for recipe IDs. Default is "recipe_id".
@@ -344,10 +344,10 @@ def build_recipe_volume_matrix(
     recipe_registry = Registry(recipes)
 
     # Build volume matrix
-    volume_matrix = np.zeros((len(recipe_registry), len(registry)))
+    volume_matrix = np.zeros((len(recipe_registry), len(ingredient_registry)))
     for _, row in recipes_df.iterrows():
         recipe_index = recipe_id_to_index[str(row[recipe_id_col])]
-        ingredient_index = registry.get_index(id=str(row[ingredient_id_col]))
+        ingredient_index = ingredient_registry.get_index(id=str(row[ingredient_id_col]))
         volume_matrix[recipe_index, ingredient_index] = float(row[volume_col])
 
     # Check that all rows of volume_matrix sum to 1 within numerical error
@@ -613,86 +613,6 @@ def build_index_to_id(id_to_index: dict[str, int]) -> list[str]:
     return index_to_id
 
 
-def _normalize_id_to_name_keys(
-    id_to_name: dict[str | int, str],
-) -> dict[str, str]:
-    """
-    Normalize an id->name mapping to use string keys consistently.
-    """
-    return {str(k): v for k, v in id_to_name.items()}
-
-
-def report_neighbors(
-    distance_matrix: np.ndarray,
-    registry: "Registry",
-    k: int,
-) -> pd.DataFrame:
-    """
-    Report k nearest neighbors for each entity in the registry.
-
-    Works for any entity type (ingredients, recipes, etc.) - the registry
-    determines what entities are being compared.
-
-    Parameters
-    ----------
-    distance_matrix : np.ndarray
-        Pairwise distance matrix (n, n) where n = len(registry).
-        For ingredients: typically tree-based cost matrix.
-        For recipes: typically EMD-based distance matrix.
-    registry : Registry
-        Entity metadata registry with IDs and names.
-    k : int
-        Number of neighbors to report per entity (excluding self).
-
-    Returns
-    -------
-    pd.DataFrame
-        Columns: id, name, neighbor_id, neighbor_name, distance
-
-        - id, name: The entity whose neighbors are being reported
-        - neighbor_id, neighbor_name: The neighbor entity
-        - distance: Distance value from the input matrix
-
-    Examples
-    --------
-    >>> # Ingredient neighbors
-    >>> cost_matrix, ingredient_registry = build_ingredient_distance_matrix(parent_map, id_to_name)
-    >>> ingredient_neighbors = report_neighbors(cost_matrix, ingredient_registry, k=5)
-
-    >>> # Recipe neighbors
-    >>> volume_matrix, recipe_registry = build_recipe_volume_matrix(recipes_df, ingredient_registry)
-    >>> emd_dist = emd_matrix(volume_matrix, cost_matrix)
-    >>> recipe_neighbors = report_neighbors(emd_dist, recipe_registry, k=10)
-    """
-
-    # Validate matrix dimensions match registry
-    registry.validate_matrix(distance_matrix)
-
-    nn_idx, nn_dist = knn_matrix(distance_matrix, k)
-
-    records: list[dict[str, str | float]] = []
-    for idx in range(len(registry)):
-        entity_id = registry.get_id(index=idx)
-        entity_name = registry.get_name(index=idx)
-
-        for neighbor_idx, dist in zip(nn_idx[idx], nn_dist[idx], strict=False):
-            n_idx = int(neighbor_idx)
-            neighbor_id = registry.get_id(index=n_idx)
-            neighbor_name = registry.get_name(index=n_idx)
-
-            records.append(
-                {
-                    "id": entity_id,
-                    "name": entity_name,
-                    "neighbor_id": neighbor_id,
-                    "neighbor_name": neighbor_name,
-                    "distance": float(dist),
-                }
-            )
-
-    return pd.DataFrame.from_records(records)
-
-
 def neighbor_weight_matrix(
     distance_matrix: np.ndarray,
     k: int,
@@ -781,8 +701,9 @@ def _sparsify_transport_plan(
 
 
 def expected_ingredient_match_matrix(
-    volume_matrix: np.ndarray,
-    cost_matrix: np.ndarray,
+    distance_matrix: np.ndarray,
+    plans: dict[tuple[int, int], list[tuple[int, int, float, float]]],
+    n_ingredients: int,
     k: int,
     beta: float,
     plan_topk: int | None = None,
@@ -799,10 +720,12 @@ def expected_ingredient_match_matrix(
 
     Parameters
     ----------
-    volume_matrix : np.ndarray
-        Array of shape (n_recipes, m_ingredients) with recipe ingredient fractions.
-    cost_matrix : np.ndarray
-        Ingredient substitution cost matrix of shape (m_ingredients, m_ingredients).
+    distance_matrix : np.ndarray
+        Array of shape (n_recipes, n_recipes) with pairwise distances between recipes.
+    plans : dict[tuple[int, int], list[tuple[int, int, float, float]]]
+        Transport plans between all recipe pairs.
+    n_ingredients : int
+        Number of ingredients.
     k : int
         Number of nearest neighbors per recipe.
     beta : float
@@ -821,10 +744,8 @@ def expected_ingredient_match_matrix(
     N_pairs : int
         Number of directed neighbor pairs accumulated (n_recipes * k).
     """
-    n_recipes, n_ingredients = volume_matrix.shape
-    # Compute pairwise EMD distances and transport plans between recipes
-    dmat, plans = emd_matrix(volume_matrix, cost_matrix, return_plans=True)
-    nn_idx, nn_dist = knn_matrix(dmat, max(1, min(k, n_recipes - 1)))
+    n_recipes = distance_matrix.shape[0]
+    nn_idx, nn_dist = knn_matrix(distance_matrix, max(1, min(k, n_recipes - 1)))
 
     T_sum = np.zeros((n_ingredients, n_ingredients), dtype=float)
     for r in range(n_recipes):
@@ -857,7 +778,7 @@ def _median_rescale(cost_matrix: np.ndarray, target: float = 1.0) -> np.ndarray:
 
 def m_step_blosum(
     T_sum: np.ndarray,
-    blosum_alpha: float,
+    blosum_alpha: float = 1.0,
     median_target: float = 1.0,
 ) -> np.ndarray:
     """

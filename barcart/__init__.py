@@ -8,26 +8,21 @@ hierarchical ingredient trees and Earth Mover's Distance.
 __version__ = "0.1.0"
 
 from barcart.distance import (
-    # Utilities
     build_index_to_id,
     build_ingredient_distance_matrix,
-    # Tree building
     build_ingredient_tree,
-    # Recipe analysis
     build_recipe_volume_matrix,
     compute_emd,
     emd_matrix,
-    # Advanced analytics
     expected_ingredient_match_matrix,
-    # Neighborhood analysis
     knn_matrix,
     m_step_blosum,
     neighbor_weight_matrix,
-    report_neighbors,
-    # Distance computations
     weighted_distance,
 )
+from barcart.em_learner import em_fit
 from barcart.registry import Registry
+from barcart.reporting import report_neighbors
 
 __all__ = [
     # Core types
@@ -48,6 +43,8 @@ __all__ = [
     # Advanced analytics
     "expected_ingredient_match_matrix",
     "m_step_blosum",
-    # Utilities
+    "em_fit",
     "build_index_to_id",
+    "report_neighbors",
+    "em_fit",
 ]
