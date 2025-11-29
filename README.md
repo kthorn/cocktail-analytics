@@ -1,6 +1,8 @@
 # Barcart
 
-Backend code for cocktail analytics - recipe and ingredient similarities.
+** Deprecated **
+
+This package is deprecated because the code has been moved into cocktaildb.
 
 ## Features
 
